@@ -13,7 +13,7 @@ import (
 // provide sync mechanism to call doSimComp
 func DoSimComp() {
 	var wg sync.WaitGroup
-	var fc = make(chan *Case, 40)
+	var fc = make(chan Case, 40)
 	var tokens = make(chan struct{}, 40)
 	var SimCompFunc fs.WalkDirFunc = func(path string, d fs.DirEntry, err error) error {
 		if !d.IsDir() {
@@ -37,13 +37,13 @@ func DoSimComp() {
 
 		wg.Done()
 	}()
-	ln := &LinkedNode{}
+	ln := NewLn()
 	for done := range fc {
 		ln.ComparedAppend(done)
 	}
 }
 
-func doFileParse(path string, wg *sync.WaitGroup, parsed chan<- *Case, tokens <-chan struct{}) {
+func doFileParse(path string, wg *sync.WaitGroup, parsed chan<- Case, tokens <-chan struct{}) {
 	defer func() {
 		<-tokens
 		wg.Done()
@@ -57,7 +57,7 @@ func doFileParse(path string, wg *sync.WaitGroup, parsed chan<- *Case, tokens <-
 	if err != nil {
 		fmt.Println(err)
 	}
-	var c = &Case{Name: path}
+	var c = Case{Name: path}
 	for _, row := range rows {
 		if len(row) < Cfg.Length() {
 			continue

@@ -16,7 +16,7 @@ type Config struct {
 var Cfg = Config{}
 
 func init() {
-	f, err := os.Open("config.txt")
+	f, err := os.Open("./handler/config.txt")
 	if err != nil {
 		log.Fatal("Cannot recognize config file : config.txt")
 	}
