@@ -1,19 +1,19 @@
 package handler
 
 import (
+	"bytes"
 	"fmt"
 	"io/fs"
-	"log"
+	syspath "path"
 	"sync"
 
-	"github.com/CodingPet-jpg/ptfread/base"
 	"github.com/xuri/excelize/v2"
 )
 
 // provide sync mechanism to call doSimComp
 func DoSimComp() {
 	var wg sync.WaitGroup
-	var fc = make(chan base.Case, 100)
+	var fc = make(chan *Case, 40)
 	var tokens = make(chan struct{}, 40)
 	var SimCompFunc fs.WalkDirFunc = func(path string, d fs.DirEntry, err error) error {
 		if !d.IsDir() {
@@ -33,96 +33,55 @@ func DoSimComp() {
 			close(tokens)
 		}()
 
-		fs.WalkDir(base.Fs, ".", SimCompFunc)
+		fs.WalkDir(Fs, ".", SimCompFunc)
 
 		wg.Done()
 	}()
-
+	ln := &LinkedNode{}
 	for done := range fc {
-		log.Println(done)
+		ln.ComparedAppend(done)
 	}
 }
 
-func doFileParse(path string, wg *sync.WaitGroup, parsed chan<- base.Case, tokens <-chan struct{}) {
+func doFileParse(path string, wg *sync.WaitGroup, parsed chan<- *Case, tokens <-chan struct{}) {
 	defer func() {
 		<-tokens
 		wg.Done()
 	}()
-	f, err := excelize.OpenFile(path)
+	f, err := excelize.OpenFile(syspath.Join(GetWd(), path))
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			fmt.Println(err)
-		}
-	}()
-	rows, err := f.Rows("Sheet1")
+	rows, err := f.GetRows(BaseSheet)
 	if err != nil {
 		fmt.Println(err)
-		return
 	}
-	for rows.Next() {
-		row, err := rows.Columns()
-		if err != nil {
-			fmt.Println(err)
+	var c = &Case{Name: path}
+	for _, row := range rows {
+		if len(row) < Cfg.Length() {
+			continue
 		}
-		for _, colCell := range row {
-			fmt.Print(colCell, "\t")
+		var strBuilder bytes.Buffer
+		for i, col := range row {
+			if Cfg.HitIndex(i) {
+				if value, ok := regex(col); ok {
+					_, err := strBuilder.Write([]byte(value))
+					if err != nil {
+						fmt.Println(err)
+					}
+				}
+			}
 		}
-		fmt.Println()
+		// TODO: 当前添加方式可能会有相同条目被添加到手顺节点中，增加之后链表遍历比对的压力，需要在解析时去重
+		str := strBuilder.String()
+		if _, ok := c.Contain(str); !ok {
+			c.PushBack(strBuilder.String())
+		}
 	}
-	if err = rows.Close(); err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(f)
+	parsed <- c
 }
 
-/*
-type ResultSet struct{}
-
-func NewFileSet(dir string, filter func(filename string) string) []string {
-	if !filepath.IsAbs(dir) {
-		prefix, _ := os.Getwd()
-		dir = prefix + dir
-	}
-	if fileinfo, err := os.Stat(dir); err != nil {
-		log.Fatalf("Failed:%v", err)
-	} else if !fileinfo.IsDir() {
-		log.Fatalln("Not Dictionary")
-	}
-	fc := make(chan string, 100)
-	wg.Add(1)
-	go getFileSet(dir, fc)
-
-	var rs []string
-	go func() {
-		wg.Wait()
-		close(fc)
-	}()
-	for s := range fc {
-		s = filter(s)
-		if s != "" {
-			rs = append(rs, "/"+s)
-		}
-	}
-
-	return rs
+func regex(name string) (string, bool) {
+	return name, true
 }
-
-func getFileSet(dir string, fc chan<- string) {
-	defer wg.Done()
-	direntries, err := os.ReadDir(dir)
-	if err != nil {
-		log.Fatalf("error:%v", err)
-	}
-	for _, de := range direntries {
-		if de.IsDir() {
-			wg.Add(1)
-			go getFileSet(dir+de.Name(), fc)
-		}
-		fc <- dir + de.Name()
-	}
-}
-*/
