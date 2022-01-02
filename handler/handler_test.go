@@ -1,7 +1,11 @@
 package handler
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestDoSimComp(t *testing.T) {
 	DoSimComp()
+	fmt.Println(Counter)
 }

@@ -5,5 +5,5 @@ import (
 )
 
 func main() {
-	handler.DoSimComp()
+	handler.ParllelComp()
 }
