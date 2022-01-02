@@ -1,7 +1,12 @@
 package handler
 
 import (
+	"bytes"
 	"container/list"
+	"fmt"
+	"os"
+	"strings"
+	"sync"
 )
 
 type (
@@ -55,4 +60,16 @@ func (tcase Case) Contain(s string) (target *list.Element, ok bool) {
 		}
 	}
 	return
+}
+
+func (tcase Case) Format(f *os.File, twc chan<- *bytes.Buffer, wg *sync.WaitGroup) {
+	defer wg.Done()
+	buf := new(bytes.Buffer)
+	fmt.Fprintf(buf, "%s\n\n", tcase.Name)
+	for entry := tcase.Front(); entry != nil; entry = entry.Next() {
+
+		fmt.Fprintln(buf, strings.ReplaceAll(entry.Value.(string), ",", "\t\t"))
+	}
+	fmt.Fprintln(buf, "※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※")
+	twc <- buf
 }

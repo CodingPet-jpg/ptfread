@@ -8,7 +8,7 @@ import (
 
 type Config struct {
 	Sheet   string `yaml:"ActiveSheet"`
-	Bitmap  int64  `yaml:"BitMap"`
+	Bitmap  uint64 `yaml:"BitMap"`
 	Length  int    `yaml:"Length"`
 	WorkDir string `yaml:"WorkDirectory"`
 	Pn      int    `yaml:"ParallelNum"`
@@ -26,8 +26,8 @@ func init() {
 	}
 }
 
-func (config *Config) HitIndex(i int) bool {
-	return (1<<i)&config.Bitmap == 1
+func (config *Config) HitIndex(i uint64) bool {
+	return config.Bitmap&(1<<i) != 0
 }
 
 // defined as variable for easy switch when doing test

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
+	"log"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -14,6 +15,7 @@ import (
 // provide sync mechanism to call doSimComp
 
 func ParllelComp() {
+	begin()
 	var (
 		wg     sync.WaitGroup
 		parsed = make(chan Case, Cfg.Pn)
@@ -39,7 +41,7 @@ func ParllelComp() {
 			}
 			var strBuilder bytes.Buffer
 			for i, col := range row {
-				if Cfg.HitIndex(i) {
+				if Cfg.HitIndex(uint64(i)) {
 					if value, ok := post(col); ok {
 						_, err := strBuilder.Write([]byte(value + ","))
 						if err != nil {
@@ -79,11 +81,11 @@ func ParllelComp() {
 		wg.Done()
 	}()
 
-	cc := NewCaseChain()
-	for done := range parsed {
-		cc.EliAppend(done)
+	chain := NewCaseChain()
+	for pcase := range parsed {
+		chain.EliAppend(pcase)
 	}
-	for ele := cc.Front(); ele != nil; ele = ele.Next() {
-		fmt.Println(ele.Value.(Case).Name)
-	}
+	end()
+	brief := report(chain)
+	log.Printf("Remaining File Count:%d\tSpend Time:%s\n", brief.remainCount, brief.cost)
 }
