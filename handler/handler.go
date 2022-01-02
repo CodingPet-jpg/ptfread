@@ -4,22 +4,24 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
-	syspath "path"
+	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/xuri/excelize/v2"
 )
 
 // provide sync mechanism to call doSimComp
+
 func DoSimComp() {
 	var wg sync.WaitGroup
-	var fc = make(chan *Case, 40)
-	var tokens = make(chan struct{}, 40)
+	var fc = make(chan Case, 4000)
+	var tokens = make(chan struct{}, 4000)
 	var SimCompFunc fs.WalkDirFunc = func(path string, d fs.DirEntry, err error) error {
 		if !d.IsDir() {
 			wg.Add(1)
 			tokens <- struct{}{}
-			go doFileParse(path, &wg, fc, tokens)
+			go parse(path, &wg, fc, tokens)
 		}
 		return nil
 	}
@@ -33,22 +35,27 @@ func DoSimComp() {
 			close(tokens)
 		}()
 
-		fs.WalkDir(Fs, ".", SimCompFunc)
+		if err := filepath.WalkDir(GetWd(), SimCompFunc); err != nil {
+			fmt.Println(err)
+		}
 
 		wg.Done()
 	}()
-	ln := &LinkedNode{}
+	cc := NewCaseChain()
 	for done := range fc {
-		ln.ComparedAppend(done)
+		cc.EliAppend(done)
+	}
+	for ele := cc.Front(); ele != nil; ele = ele.Next() {
+		fmt.Println(ele.Value.(Case).Name)
 	}
 }
 
-func doFileParse(path string, wg *sync.WaitGroup, parsed chan<- *Case, tokens <-chan struct{}) {
+func parse(path string, wg *sync.WaitGroup, parsed chan<- Case, tokens <-chan struct{}) {
 	defer func() {
 		<-tokens
 		wg.Done()
 	}()
-	f, err := excelize.OpenFile(syspath.Join(GetWd(), path))
+	f, err := excelize.OpenFile(path)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -57,7 +64,7 @@ func doFileParse(path string, wg *sync.WaitGroup, parsed chan<- *Case, tokens <-
 	if err != nil {
 		fmt.Println(err)
 	}
-	var c = &Case{Name: path}
+	var c = NewCase(filepath.Base(path))
 	for _, row := range rows {
 		if len(row) < Cfg.Length() {
 			continue
@@ -65,8 +72,8 @@ func doFileParse(path string, wg *sync.WaitGroup, parsed chan<- *Case, tokens <-
 		var strBuilder bytes.Buffer
 		for i, col := range row {
 			if Cfg.HitIndex(i) {
-				if value, ok := regex(col); ok {
-					_, err := strBuilder.Write([]byte(value))
+				if value, ok := post(col); ok {
+					_, err := strBuilder.Write([]byte(value + ","))
 					if err != nil {
 						fmt.Println(err)
 					}
@@ -74,14 +81,10 @@ func doFileParse(path string, wg *sync.WaitGroup, parsed chan<- *Case, tokens <-
 			}
 		}
 		// TODO: 当前添加方式可能会有相同条目被添加到手顺节点中，增加之后链表遍历比对的压力，需要在解析时去重
-		str := strBuilder.String()
+		str := strings.TrimRight(strBuilder.String(), ",")
 		if _, ok := c.Contain(str); !ok {
-			c.PushBack(strBuilder.String())
+			c.PushBack(str)
 		}
 	}
 	parsed <- c
-}
-
-func regex(name string) (string, bool) {
-	return name, true
 }
