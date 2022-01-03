@@ -1,0 +1,9 @@
+ActiveSheet : Sheet1
+WorkDirectory : C:\Users\JOKOI\GolandProjects\testdata
+Length : 5
+BitMap : 8191
+ParallelNum : 3000
+InheritSource :
+  - C:\Users\JOKOI\GolandProjects\testdata\report\report[2022-01-03 ※ 18-21-38].txt
+  - C:\Users\JOKOI\GolandProjects\testdata\report\report[2022-01-03 ※ 17-32-21].txt
+  - C:\Users\JOKOI\GolandProjects\testdata\report\report[2022-01-03 ※ 20-08-14].txt
