@@ -7,14 +7,17 @@ import (
 )
 
 type Config struct {
-	Sheet   string `yaml:"ActiveSheet"`
-	Bitmap  uint64 `yaml:"BitMap"`
-	Length  int    `yaml:"Length"`
-	WorkDir string `yaml:"WorkDirectory"`
-	Pn      int    `yaml:"ParallelNum"`
+	Sheet   string   `yaml:"ActiveSheet"`
+	Bitmap  uint64   `yaml:"BitMap"`
+	Length  int      `yaml:"Length,omitempty"`
+	WorkDir string   `yaml:"WorkDirectory"`
+	Pn      int      `yaml:"ParallelNum"`
+	Is      []string `yaml:"InheritSource"`
 }
 
-var Cfg Config
+// default 4,can be overwritten by yml
+
+var Cfg = Config{Length: 4}
 
 func init() {
 	yml, err := ioutil.ReadFile("config.yml")

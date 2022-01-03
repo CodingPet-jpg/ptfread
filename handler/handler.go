@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
-	"log"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -66,26 +65,33 @@ func ParllelComp() {
 		return nil
 	}
 
-	go func() {
-		wg.Add(1)
-
+	if Cfg.WorkDir != "" {
 		go func() {
-			wg.Wait()
-			close(parsed)
+			wg.Add(1)
+
+			go func() {
+				wg.Wait()
+				close(parsed)
+			}()
+
+			if err := filepath.WalkDir(Cfg.WorkDir, SimCompFunc); err != nil {
+				fmt.Println(err)
+			}
+
+			wg.Done()
 		}()
+	}
 
-		if err := filepath.WalkDir(Cfg.WorkDir, SimCompFunc); err != nil {
-			fmt.Println(err)
-		}
+	var chain CaseChain
+	if len(Cfg.Is) != 0 {
 
-		wg.Done()
-	}()
+	} else {
+		chain = NewCaseChain()
+	}
 
-	chain := NewCaseChain()
 	for pcase := range parsed {
 		chain.EliAppend(pcase)
 	}
-	end()
-	brief := report(chain)
-	log.Printf("Remaining File Count:%d\tSpend Time:%s\n", brief.remainCount, brief.cost)
+
+	report(chain)
 }

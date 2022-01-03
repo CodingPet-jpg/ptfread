@@ -21,8 +21,12 @@ var brief conclusion
 var start time.Time
 
 func report(chain CaseChain) conclusion {
-	var location = filepath.Join(Cfg.WorkDir, "report")
+	brief.cost = time.Since(start)
 	brief.remainCount = chain.Len()
+	log.Println("All task completed")
+	log.Printf("Remaining File Count:%d\tSpend Time:%s\n", brief.remainCount, brief.cost)
+	log.Println("Taking a while to generate the report")
+	var location = filepath.Join(Cfg.WorkDir, "report")
 	errm := os.Mkdir(location, os.ModeDir)
 	if !errors.Is(errm, fs.ErrExist) {
 		log.Printf("Failed to create directory %s", location)
@@ -33,7 +37,7 @@ func report(chain CaseChain) conclusion {
 		log.Printf("Failed to create report:%s\n", filename)
 	}
 	tw := new(tabwriter.Writer).Init(f, 0, 8, 2, ' ', 0)
-	bufc := make(chan *bytes.Buffer, 100)
+	bufc := make(chan *bytes.Buffer, Cfg.Pn/2)
 	wg := sync.WaitGroup{}
 	for ele := chain.Front(); ele != nil; ele = ele.Next() {
 		wg.Add(1)
@@ -56,6 +60,5 @@ func begin() {
 }
 
 func end() {
-	log.Println("All task completed,Taking a while to generate the report")
-	brief.cost = time.Since(start)
+
 }
