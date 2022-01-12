@@ -67,8 +67,8 @@ func ParllelComp() {
 	}
 
 	if Cfg.WorkDir != "" {
+		wg.Add(1)
 		go func() {
-			wg.Add(1)
 			if err := filepath.WalkDir(Cfg.WorkDir, SimCompFunc); err != nil {
 				fmt.Println(err)
 			}
@@ -79,8 +79,10 @@ func ParllelComp() {
 	var chain = NewCaseChain()
 	// TODO:support incremental updating
 	wg2 := sync.WaitGroup{}
-	parsed2 := make(chan Case, len(Cfg.Is))
+	var parsed2 chan Case
+
 	if len(Cfg.Is) != 0 {
+		parsed2 = make(chan Case, len(Cfg.Is))
 		for i, p := range Cfg.Is {
 			f, err := os.Open(p)
 			if err != nil {
@@ -118,8 +120,10 @@ func ParllelComp() {
 		wg.Wait()
 		close(parsed)
 	}()
-	for pcase2 := range parsed2 {
-		chain.PushBack(pcase2)
+	if parsed2 != nil {
+		for pcase2 := range parsed2 {
+			chain.PushBack(pcase2)
+		}
 	}
 	// only WalkDir can release parsed channel
 	for pcase := range parsed {

@@ -66,8 +66,9 @@ func (tcase Case) Contain(sentry []string) (target *list.Element, ok bool) {
 	// iterate each entry in current case
 	for tentry := tcase.Front(); tentry != nil; {
 		// compare the target entry and source entry
-		for i, s := range tentry.Value.([]string) {
-			if s == sentry[i] {
+		// TODO:bugfix out of range
+		for i, s := range sentry {
+			if s == tentry.Value.([]string)[i] {
 				continue
 			}
 			goto unfind
